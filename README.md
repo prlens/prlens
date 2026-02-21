@@ -1,7 +1,7 @@
 # PR Lens
 
-[![CI](https://github.com/codingdash/prlens/actions/workflows/ci.yml/badge.svg)](https://github.com/codingdash/prlens/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/codingdash/prlens/branch/main/graph/badge.svg)](https://codecov.io/gh/codingdash/prlens)
+[![CI](https://github.com/prlens/prlens/actions/workflows/ci.yml/badge.svg)](https://github.com/prlens/prlens/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/prlens/prlens/branch/main/graph/badge.svg)](https://codecov.io/gh/prlens/prlens)
 [![PyPI](https://img.shields.io/pypi/v/prlens.svg)](https://pypi.org/project/prlens/)
 [![Python](https://img.shields.io/pypi/pyversions/prlens.svg)](https://pypi.org/project/prlens/)
 
@@ -99,7 +99,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: codingdash/prlens/.github/actions/review@main
+      - uses: prlens/prlens/.github/actions/review@main
         with:
           model: anthropic
           github-token: ${{ secrets.GITHUB_TOKEN }}

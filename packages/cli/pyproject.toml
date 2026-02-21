@@ -46,8 +46,8 @@ dev = [
 prlens = "prlens_cli.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/codingdash/prlens"
-Issues = "https://github.com/codingdash/prlens/issues"
+Homepage = "https://github.com/prlens/prlens"
+Issues = "https://github.com/prlens/prlens/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

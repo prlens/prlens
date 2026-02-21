@@ -18,7 +18,7 @@ apps/
 ## Development Setup
 
 ```bash
-git clone https://github.com/codingdash/prlens.git
+git clone https://github.com/prlens/prlens.git
 cd prlens
 
 # Create and activate a virtual environment

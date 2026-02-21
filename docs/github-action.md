@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: codingdash/prlens/.github/actions/review@main
+      - uses: prlens/prlens/.github/actions/review@main
         with:
           model: anthropic
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -104,7 +104,7 @@ steps:
       sparse-checkout: |
         guidelines/code-review.md
 
-  - uses: codingdash/prlens/.github/actions/review@main
+  - uses: prlens/prlens/.github/actions/review@main
     with:
       model: anthropic
       github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -121,7 +121,7 @@ steps:
       path: .guidelines
       # no token needed for public repos
 
-  - uses: codingdash/prlens/.github/actions/review@main
+  - uses: prlens/prlens/.github/actions/review@main
     with:
       guidelines: .guidelines/guidelines/code-review.md
       # ... other inputs
@@ -132,7 +132,7 @@ steps:
 ## Using OpenAI
 
 ```yaml
-- uses: codingdash/prlens/.github/actions/review@main
+- uses: prlens/prlens/.github/actions/review@main
   with:
     model: openai
     github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -160,7 +160,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: codingdash/prlens/.github/actions/review@main
+      - uses: prlens/prlens/.github/actions/review@main
         with:
           model: anthropic
           github-token: ${{ secrets.GITHUB_TOKEN }}

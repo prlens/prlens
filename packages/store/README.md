@@ -1,6 +1,6 @@
 # prlens-store
 
-Pluggable review history backends for [prlens](https://github.com/codingdash/prlens) — AI-powered GitHub PR code reviewer for teams.
+Pluggable review history backends for [prlens](https://github.com/prlens/prlens) — AI-powered GitHub PR code reviewer for teams.
 
 ## What's in this package
 
@@ -30,6 +30,6 @@ store.close()
 
 ## Links
 
-- [Documentation & CLI](https://github.com/codingdash/prlens)
-- [Changelog](https://github.com/codingdash/prlens/releases)
-- [Issues](https://github.com/codingdash/prlens/issues)
+- [Documentation & CLI](https://github.com/prlens/prlens)
+- [Changelog](https://github.com/prlens/prlens/releases)
+- [Issues](https://github.com/prlens/prlens/issues)
