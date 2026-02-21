@@ -1,0 +1,34 @@
+# Root workspace descriptor.
+#
+# With uv (recommended):
+#   uv sync                       # install all packages in dev mode
+#
+# Without uv (plain pip):
+#   pip install -e packages/core[dev,all] -e packages/store[dev] -e packages/cli[dev]
+#
+# Run all tests:
+#   pytest packages/core/tests packages/store/tests packages/cli/tests
+#
+# Build for release (from repo root):
+#   python -m build packages/core  --outdir dist/
+#   python -m build packages/store --outdir dist/
+#   python -m build packages/cli   --outdir dist/
+#   twine upload dist/*
+
+[tool.uv.workspace]
+members = ["packages/core", "packages/store", "packages/cli"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "packages/core/tests",
+    "packages/store/tests",
+    "packages/cli/tests",
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E203", "W503"]

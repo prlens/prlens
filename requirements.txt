@@ -1,0 +1,8 @@
+# Runtime dependencies are declared in each package's pyproject.toml.
+# Install all packages in editable mode for local development:
+#
+#   pip install -e packages/core[dev,all] -e packages/store[dev] -e packages/cli[dev]
+#
+# Or via Make:
+#
+#   make install

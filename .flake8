@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 120
+# E203: whitespace before ':' — Black formats slices this way (e.g. list[i : i + n])
+extend-ignore = E203

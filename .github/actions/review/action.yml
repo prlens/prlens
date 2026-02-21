@@ -1,0 +1,59 @@
+name: 'AI Code Reviewer'
+description: 'Reviews GitHub PRs using AI (Claude or GPT-4o) and posts inline comments.'
+
+inputs:
+  model:
+    description: 'AI model provider: anthropic or openai'
+    required: false
+    default: 'anthropic'
+  github-token:
+    description: 'GitHub token with pull-request write permissions'
+    required: true
+  anthropic-api-key:
+    description: 'Anthropic API key (required when model is anthropic)'
+    required: false
+    default: ''
+  openai-api-key:
+    description: 'OpenAI API key (required when model is openai)'
+    required: false
+    default: ''
+  guidelines:
+    description: 'Path to a Markdown guidelines file relative to repository root. Overrides config file.'
+    required: false
+    default: ''
+  config-path:
+    description: 'Path to .prlens.yml config file relative to repository root'
+    required: false
+    default: '.prlens.yml'
+  full-review:
+    description: 'Set to "true" to review all files even if a previous review exists'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install prlens
+      shell: bash
+      run: pip install "prlens[${{ inputs.model }}]"
+
+    - name: Run code review
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+      run: |
+        prlens review \
+          --repo "${{ github.repository }}" \
+          --pr "${{ github.event.pull_request.number }}" \
+          --model "${{ inputs.model }}" \
+          --config "${{ inputs.config-path }}" \
+          ${{ inputs.guidelines && format('--guidelines "{0}"', inputs.guidelines) || '' }} \
+          ${{ inputs.full-review == 'true' && '--full-review' || '' }} \
+          --yes

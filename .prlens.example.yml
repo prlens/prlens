@@ -1,0 +1,28 @@
+# .prlens.yml
+# Copy this file to your repository root and customize it.
+# All fields are optional — built-in defaults apply when not set.
+
+# AI model provider: anthropic (Claude) or openai (GPT-4o)
+model: anthropic
+
+# Maximum characters of diff and file content sent to the AI per file.
+# Increase this for models with larger context windows.
+max_chars_per_file: 20000
+
+# Maximum number of comments posted in a single review batch.
+# GitHub has a limit of 60 comments per review API call.
+batch_limit: 60
+
+# Path to your team's coding guidelines (relative to the repository root).
+# When not set, the built-in default guidelines are used.
+# guidelines: ./docs/guidelines.md
+
+# Patterns of files and directories to skip during review.
+# Supports fnmatch-style globs and directory names.
+# exclude:
+#   - migrations/        # skip all files inside any migrations/ directory
+#   - "*.min.js"         # skip minified JS files
+#   - src/generated/     # skip a specific generated directory
+
+# Set to true to review draft pull requests (skipped by default).
+review_draft_prs: false

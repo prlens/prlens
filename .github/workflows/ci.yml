@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e packages/core[dev,all] -e packages/store[dev] -e packages/cli[dev]
+
+      - name: Run tests with coverage
+        run: |
+          pytest packages/core/tests packages/store/tests packages/cli/tests -v \
+            --cov=prlens_core --cov=prlens_store --cov=prlens_cli \
+            --cov-report=xml --cov-report=term-missing
+
+      - name: Check formatting
+        run: |
+          black --check \
+            packages/core/src packages/store/src packages/cli/src \
+            packages/core/tests packages/store/tests packages/cli/tests
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

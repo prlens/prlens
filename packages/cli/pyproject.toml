@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prlens"
+version = "0.1.8"
+description = "AI-powered GitHub PR code reviewer for teams"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+keywords = ["code-review", "github", "ai", "llm", "pull-request"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "prlens-core>=0.1.8",
+    "prlens-store>=0.1.8",
+    "click>=8.0",
+    "rich>=13.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["prlens-core[anthropic]"]
+openai = ["prlens-core[openai]"]
+all = ["prlens-core[all]"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-mock>=3.12",
+    "black>=24.0",
+    "flake8>=7.0",
+]
+
+[project.scripts]
+prlens = "prlens_cli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/codingdash/prlens"
+Issues = "https://github.com/codingdash/prlens/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 120
+target-version = ["py39", "py310", "py311", "py312"]

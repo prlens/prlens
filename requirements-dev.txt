@@ -1,0 +1,8 @@
+# Dev dependencies are declared in each package's pyproject.toml [dev] extra.
+# Install all packages with dev extras:
+#
+#   pip install -e packages/core[dev,all] -e packages/store[dev] -e packages/cli[dev]
+#
+# Or via Make:
+#
+#   make install
