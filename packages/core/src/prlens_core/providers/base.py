@@ -162,7 +162,7 @@ Respond with **only** a valid JSON list:
   {{
     "line": <line number in the new file (integer)>,
     "severity": "<critical|major|minor|nitpick>",
-    "comment": "<concise, actionable comment — use GitHub-flavored markdown; wrap code snippets in triple-backtick fences with a language tag>"
+    "comment": "<concise, actionable comment — use GitHub-flavored markdown; wrap code in triple-backtick fences with a language tag>"  # noqa: E501
   }},
   ...
 ]

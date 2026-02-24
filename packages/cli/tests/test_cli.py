@@ -431,7 +431,10 @@ class TestInitCommand:
         result = CliRunner().invoke(
             main,
             ["init"],
-            input="owner/myrepo\nanthropomorphic\nanthropomorphic\nanthropomorphic\nanthropomorphic\nanthropomorphic\nanthropomorphic\n",
+            input=(
+                "owner/myrepo\nanthropomorphic\nanthropomorphic\nanthropomorphic\n"
+                "anthropomorphic\nanthropomorphic\nanthropomorphic\n"
+            ),
         )
 
         # Just verify it asked for the repo

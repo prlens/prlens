@@ -198,7 +198,7 @@ def _create_team_gist(repo: str) -> str | None:
         if result.returncode == 0:
             gist_url = result.stdout.strip()
             return gist_url.rstrip("/").split("/")[-1]
-        logger.warning("gh gist create failed: %s", result.stderr.strip())
+        console.print(f"[yellow]gh gist create failed: {result.stderr.strip()}[/yellow]")
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     return None
@@ -220,6 +220,7 @@ def _get_version() -> str:
     """Read the current prlens version from the installed package metadata."""
     try:
         from importlib.metadata import version
+
         return version("prlens")
     except Exception:
         return "0.1.8"
