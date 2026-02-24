@@ -51,6 +51,8 @@ release:
 	sed -i '' "s/^version = \"$$CURRENT\"/version = \"$$NEW\"/" packages/cli/pyproject.toml; \
 	sed -i '' "s/prlens-core>=[0-9.]*/prlens-core>=$$NEW/" packages/cli/pyproject.toml; \
 	sed -i '' "s/prlens-store>=[0-9.]*/prlens-store>=$$NEW/" packages/cli/pyproject.toml; \
+	sed -i '' "s|review@v$$CURRENT|review@v$$NEW|" README.md; \
+	sed -i '' "s/default: '$$CURRENT'/default: '$$NEW'/" .github/actions/review/action.yml; \
 	echo "Installing build tools..."; \
 	pip install --quiet --upgrade build twine; \
 	echo "Building packages..."; \

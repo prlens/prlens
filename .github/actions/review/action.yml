@@ -2,6 +2,10 @@ name: 'AI Code Reviewer'
 description: 'Reviews GitHub PRs using AI (Claude or GPT-4o) and posts inline comments.'
 
 inputs:
+  version:
+    description: 'Version of prlens to install (e.g. 0.1.8). Pin this in your workflow for reproducible builds.'
+    required: false
+    default: '0.1.8'
   model:
     description: 'AI model provider: anthropic or openai'
     required: false
@@ -40,7 +44,7 @@ runs:
 
     - name: Install prlens
       shell: bash
-      run: pip install "prlens[${{ inputs.model }}]"
+      run: pip install "prlens[${{ inputs.model }}]==${{ inputs.version }}"
 
     - name: Run code review
       shell: bash

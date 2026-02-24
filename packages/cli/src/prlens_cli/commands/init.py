@@ -43,7 +43,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install prlens
-        run: pip install prlens[{provider}]
+        run: pip install "prlens[{provider}]=={version}"
 
       - name: Run PR review
         env:
@@ -216,9 +216,20 @@ def _write_config(config: dict) -> None:
     path.write_text(yaml.dump(existing, default_flow_style=False, sort_keys=False))
 
 
+def _get_version() -> str:
+    """Read the current prlens version from the installed package metadata."""
+    try:
+        from importlib.metadata import version
+        return version("prlens")
+    except Exception:
+        return "0.1.8"
+
+
 def _write_workflow(provider: str, api_key_env: str) -> None:
     """Write the GitHub Actions workflow file."""
     workflow_dir = Path(".github/workflows")
     workflow_dir.mkdir(parents=True, exist_ok=True)
     workflow_path = workflow_dir / "prlens.yml"
-    workflow_path.write_text(_WORKFLOW_TEMPLATE.format(provider=provider, api_key_env=api_key_env))
+    workflow_path.write_text(
+        _WORKFLOW_TEMPLATE.format(provider=provider, api_key_env=api_key_env, version=_get_version())
+    )
