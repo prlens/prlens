@@ -99,7 +99,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: prlens/prlens/.github/actions/review@v0.1.9
+      - uses: prlens/prlens/.github/actions/review@v0.1.10
         with:
           model: anthropic
           github-token: ${{ secrets.GITHUB_TOKEN }}

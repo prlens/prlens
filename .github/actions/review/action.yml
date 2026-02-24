@@ -5,7 +5,7 @@ inputs:
   version:
     description: 'Version of prlens to install (e.g. 0.1.8). Pin this in your workflow for reproducible builds.'
     required: false
-    default: '0.1.9'
+    default: '0.1.10'
   model:
     description: 'AI model provider: anthropic or openai'
     required: false

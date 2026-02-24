@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prlens"
-version = "0.1.9"
+version = "0.1.10"
 description = "AI-powered GitHub PR code reviewer for teams"
 readme = "README.md"
 license = {text = "MIT"}
@@ -22,8 +22,8 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "prlens-core>=0.1.9",
-    "prlens-store>=0.1.9",
+    "prlens-core>=0.1.10",
+    "prlens-store>=0.1.10",
     "click>=8.0",
     "rich>=13.0",
     "pyyaml>=6.0",

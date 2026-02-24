@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prlens-core"
-version = "0.1.9"
+version = "0.1.10"
 description = "Core review engine for prlens — AI-powered GitHub PR code reviewer"
 readme = "README.md"
 license = {text = "MIT"}
