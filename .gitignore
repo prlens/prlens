@@ -31,3 +31,6 @@ htmlcov/
 
 # Logs
 comments.log
+
+# Claude
+CLAUDE.md
