@@ -516,6 +516,26 @@ class TestRunReviewPosting:
         mock_repo.get_commit.assert_called_once_with(sha)
         assert mock_pr.create_review.call_args.kwargs["commit"] is mock_repo.get_commit.return_value
 
+    def test_create_review_exception_still_returns_summary(self, mocker):
+        """A GithubException from create_review must not propagate — run_review
+        should return a ReviewSummary so the CLI can still persist history."""
+        from github import GithubException
+
+        comments = [{"line": 2, "severity": "minor", "comment": "style issue"}]
+        mock_pr, mock_repo = _setup_run_review(mocker, reviewer_comments=comments)
+        mock_pr.create_review.side_effect = GithubException(422, "Unprocessable Entity")
+        result = run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+        assert isinstance(result, ReviewSummary)
+
+    def test_approve_exception_still_returns_summary(self, mocker):
+        """Same guarantee for the APPROVE path (no inline comments)."""
+        from github import GithubException
+
+        mock_pr, mock_repo = _setup_run_review(mocker, reviewer_comments=[])
+        mock_pr.create_review.side_effect = GithubException(500, "Internal Server Error")
+        result = run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+        assert isinstance(result, ReviewSummary)
+
     def test_batch_limit_splits_into_multiple_reviews(self, mocker):
         # Generate 3 comments with batch_limit=2 → 2 create_review calls
         reviewer_comments = [{"line": 2, "severity": "minor", "comment": f"issue {i}"} for i in range(3)]

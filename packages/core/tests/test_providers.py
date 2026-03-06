@@ -122,6 +122,14 @@ class TestBaseReviewerContextInjection:
         assert "Frequently Changed Together" not in prompt
 
 
+def _http_error(status_code: int, message: str = "error") -> Exception:
+    """Build an exception that carries a status_code, mimicking both the
+    anthropic and openai SDK exception shapes."""
+    e = Exception(message)
+    e.status_code = status_code  # type: ignore[attr-defined]
+    return e
+
+
 class TestBaseReviewerRetry:
     def test_returns_none_after_max_retries(self):
         """When _call_api raises on every attempt, review() returns []."""
@@ -149,6 +157,82 @@ class TestBaseReviewerRetry:
                 return VALID_JSON
 
         reviewer = _FailOnceThenSucceed()
+        with patch("prlens_core.providers.base.time.sleep"):
+            result = reviewer.review("desc", "f.py", "+x", "x=1", "guidelines")
+        assert len(result) == 1
+        assert call_count == 2
+
+    def test_non_retryable_4xx_does_not_retry(self):
+        """Auth and permission errors (401, 403) must fail immediately — retrying
+        them wastes time and always produces the same result."""
+        for status in (400, 401, 403, 404, 422):
+            call_count = 0
+
+            class _FourXXReviewer(BaseReviewer):
+                _status = status
+
+                def _call_api(self, system_prompt: str, user_prompt: str) -> str:
+                    nonlocal call_count
+                    call_count += 1
+                    raise _http_error(self._status)
+
+            reviewer = _FourXXReviewer()
+            with patch("prlens_core.providers.base.time.sleep") as mock_sleep:
+                result = reviewer.review("desc", "f.py", "+x", "x=1", "guidelines")
+            assert result == [], f"Expected [] for status {status}"
+            assert call_count == 1, f"Expected 1 call for status {status}, got {call_count}"
+            mock_sleep.assert_not_called()
+
+    def test_rate_limit_429_is_retried(self):
+        """429 rate-limit errors are transient and should trigger a retry."""
+        call_count = 0
+
+        class _RateLimitThenSucceed(BaseReviewer):
+            def _call_api(self, system_prompt: str, user_prompt: str) -> str:
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise _http_error(429, "Rate Limited")
+                return VALID_JSON
+
+        reviewer = _RateLimitThenSucceed()
+        with patch("prlens_core.providers.base.time.sleep"):
+            result = reviewer.review("desc", "f.py", "+x", "x=1", "guidelines")
+        assert len(result) == 1
+        assert call_count == 2
+
+    def test_server_error_5xx_is_retried(self):
+        """5xx server errors are transient and should trigger a retry."""
+        call_count = 0
+
+        class _ServerErrorThenSucceed(BaseReviewer):
+            def _call_api(self, system_prompt: str, user_prompt: str) -> str:
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise _http_error(503, "Service Unavailable")
+                return VALID_JSON
+
+        reviewer = _ServerErrorThenSucceed()
+        with patch("prlens_core.providers.base.time.sleep"):
+            result = reviewer.review("desc", "f.py", "+x", "x=1", "guidelines")
+        assert len(result) == 1
+        assert call_count == 2
+
+    def test_no_status_code_is_retried(self):
+        """Exceptions without status_code (network timeouts, connection resets)
+        are always considered transient and retried."""
+        call_count = 0
+
+        class _NetworkErrorThenSucceed(BaseReviewer):
+            def _call_api(self, system_prompt: str, user_prompt: str) -> str:
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise ConnectionError("timed out")
+                return VALID_JSON
+
+        reviewer = _NetworkErrorThenSucceed()
         with patch("prlens_core.providers.base.time.sleep"):
             result = reviewer.review("desc", "f.py", "+x", "x=1", "guidelines")
         assert len(result) == 1
