@@ -484,6 +484,18 @@ class TestRunReviewPosting:
         run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
         mock_pr.create_review.assert_called_once()
 
+    def test_api_comments_use_line_and_side_not_position(self, mocker):
+        """Review API payload must use line+side (not position) so comments resolve correctly
+        regardless of whether this is a full or incremental review."""
+        comments = [{"line": 2, "severity": "minor", "comment": "style issue"}]
+        mock_pr, mock_repo = _setup_run_review(mocker, reviewer_comments=comments)
+        run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+        api_comments = mock_pr.create_review.call_args.kwargs["comments"]
+        assert len(api_comments) == 1
+        assert api_comments[0]["line"] == 2
+        assert api_comments[0]["side"] == "RIGHT"
+        assert "position" not in api_comments[0]
+
     def test_batch_limit_splits_into_multiple_reviews(self, mocker):
         # Generate 3 comments with batch_limit=2 → 2 create_review calls
         reviewer_comments = [{"line": 2, "severity": "minor", "comment": f"issue {i}"} for i in range(3)]
