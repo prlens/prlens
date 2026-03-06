@@ -508,8 +508,11 @@ def run_review(
             answer = input("No issues found. Post APPROVE review? (y/n): ").strip().lower()
             if answer != "y":
                 return None
-        this_pr.create_review(commit=head_commit, body=summary_body, event="APPROVE")
-        console.print("\n[green]Review posted: APPROVE[/green]")
+        try:
+            this_pr.create_review(commit=head_commit, body=summary_body, event="APPROVE")
+            console.print("\n[green]Review posted: APPROVE[/green]")
+        except GithubException as e:
+            console.print(f"\n[red]Failed to post review to GitHub: {e}[/red]")
     else:
         if not auto_confirm:
             answer = input(f"Post {len(all_comments)} comment(s) as {event}? (y/n): ").strip().lower()
@@ -518,6 +521,7 @@ def run_review(
 
         batches = [all_comments[i : i + batch_limit] for i in range(0, len(all_comments), batch_limit)]
         total_posted = 0
+        posted_ok = True
         for idx, batch in enumerate(batches):
             is_last = idx == len(batches) - 1
             batch_body = (
@@ -528,13 +532,19 @@ def run_review(
             batch_event = event if is_last else "COMMENT"
             flush_to_file(repo, pr_number, batch)
             api_comments = [{"path": c["path"], "line": c["line"], "side": "RIGHT", "body": c["body"]} for c in batch]
-            this_pr.create_review(commit=head_commit, body=batch_body, event=batch_event, comments=api_comments)
-            total_posted += len(batch)
+            try:
+                this_pr.create_review(commit=head_commit, body=batch_body, event=batch_event, comments=api_comments)
+                total_posted += len(batch)
+            except GithubException as e:
+                console.print(f"\n[red]Failed to post review batch {idx + 1}/{len(batches)}: {e}[/red]")
+                posted_ok = False
+                break
 
-        reviewed_count = sum(1 for f in file_summary if not f["skipped"] and f["error"] is None)
-        console.print(
-            f"\n[green]Review posted: {event}. {total_posted} comment(s) across {reviewed_count} file(s).[/green]"
-        )
+        if posted_ok:
+            reviewed_count = sum(1 for f in file_summary if not f["skipped"] and f["error"] is None)
+            console.print(
+                f"\n[green]Review posted: {event}. {total_posted} comment(s) across {reviewed_count} file(s).[/green]"
+            )
 
     return ReviewSummary(
         repo=repo,
