@@ -498,12 +498,17 @@ def run_review(
     sha_marker = f"\n<!-- prlens-sha: {head_sha} -->"
     summary_body = _build_summary(file_summary, all_comments, elapsed, incremental_info) + sha_marker
 
+    # Pin the review to the exact commit we analysed. GitHub requires commit_id
+    # to match the PR's last commit when using line-based comment positions;
+    # without it a concurrent push could associate comments with the wrong SHA.
+    head_commit = this_repo.get_commit(head_sha)
+
     if not all_comments:
         if not auto_confirm:
             answer = input("No issues found. Post APPROVE review? (y/n): ").strip().lower()
             if answer != "y":
                 return None
-        this_pr.create_review(body=summary_body, event="APPROVE")
+        this_pr.create_review(commit=head_commit, body=summary_body, event="APPROVE")
         console.print("\n[green]Review posted: APPROVE[/green]")
     else:
         if not auto_confirm:
@@ -523,7 +528,7 @@ def run_review(
             batch_event = event if is_last else "COMMENT"
             flush_to_file(repo, pr_number, batch)
             api_comments = [{"path": c["path"], "line": c["line"], "side": "RIGHT", "body": c["body"]} for c in batch]
-            this_pr.create_review(body=batch_body, event=batch_event, comments=api_comments)
+            this_pr.create_review(commit=head_commit, body=batch_body, event=batch_event, comments=api_comments)
             total_posted += len(batch)
 
         reviewed_count = sum(1 for f in file_summary if not f["skipped"] and f["error"] is None)

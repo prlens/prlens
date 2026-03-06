@@ -496,6 +496,26 @@ class TestRunReviewPosting:
         assert api_comments[0]["side"] == "RIGHT"
         assert "position" not in api_comments[0]
 
+    def test_create_review_pins_commit_object(self, mocker):
+        """create_review must receive the commit object for head_sha so GitHub
+        associates inline comments with the correct snapshot even if a concurrent
+        push lands while the review is running."""
+        sha = "a" * 40
+        # With comments (COMMENT/REQUEST_CHANGES path)
+        comments = [{"line": 2, "severity": "minor", "comment": "issue"}]
+        mock_pr, mock_repo = _setup_run_review(mocker, reviewer_comments=comments)
+        run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+        mock_repo.get_commit.assert_called_once_with(sha)
+        assert mock_pr.create_review.call_args.kwargs["commit"] is mock_repo.get_commit.return_value
+
+    def test_approve_review_pins_commit_object(self, mocker):
+        """APPROVE reviews must also pin the commit, not just reviews with comments."""
+        sha = "a" * 40
+        mock_pr, mock_repo = _setup_run_review(mocker, reviewer_comments=[])
+        run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+        mock_repo.get_commit.assert_called_once_with(sha)
+        assert mock_pr.create_review.call_args.kwargs["commit"] is mock_repo.get_commit.return_value
+
     def test_batch_limit_splits_into_multiple_reviews(self, mocker):
         # Generate 3 comments with batch_limit=2 → 2 create_review calls
         reviewer_comments = [{"line": 2, "severity": "minor", "comment": f"issue {i}"} for i in range(3)]
