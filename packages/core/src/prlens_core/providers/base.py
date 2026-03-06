@@ -80,6 +80,21 @@ class BaseReviewer(ABC):
     # Shared implementations                                               #
     # ------------------------------------------------------------------ #
 
+    def _is_retryable(self, e: Exception) -> bool:
+        """Return True if the exception is transient and worth retrying.
+
+        Both anthropic and openai exceptions expose a status_code attribute for
+        HTTP errors. 429 (rate limit) and 5xx (server errors) are transient.
+        4xx errors other than 429 — auth failures, permission errors, invalid
+        requests — will never succeed on retry and are rejected immediately.
+        Errors without a status_code (network timeouts, connection resets) are
+        always retried since they are inherently transient.
+        """
+        status = getattr(e, "status_code", None)
+        if status is None:
+            return True  # network/timeout error — worth retrying
+        return status == 429 or status >= 500
+
     def _call_with_retry(self, system_prompt: str, user_prompt: str) -> str | None:
         """Retry _call_api up to MAX_RETRIES times with exponential backoff.
 
@@ -91,6 +106,14 @@ class BaseReviewer(ABC):
             try:
                 return self._call_api(system_prompt, user_prompt)
             except Exception as e:
+                if not self._is_retryable(e):
+                    logger.error(
+                        "%s API error (not retryable, status %s): %s",
+                        self.__class__.__name__,
+                        getattr(e, "status_code", "unknown"),
+                        e,
+                    )
+                    return None
                 if attempt == self.MAX_RETRIES - 1:
                     logger.error(
                         "%s API failed after %d attempts: %s",
