@@ -586,8 +586,13 @@ class TestRunReviewPosting:
         # get_diff was called as fallback
         mock_pr.create_review.assert_called_once()
 
-    def test_incremental_success_uses_compare_files(self, mocker):
-        """When incremental compare succeeds, diff files come from get_incremental_files."""
+    def test_incremental_success_uses_pr_diff_patches(self, mocker):
+        """When incremental compare succeeds, file patches come from the PR diff (base→head).
+
+        get_incremental_files identifies *which* files changed since last review,
+        but the file objects used for reviewing (including patches) must come from
+        get_diff so that line numbers are valid against GitHub's PR diff.
+        """
         base_sha = "b" * 40
         head_sha = "a" * 40
         mock_pr = MagicMock()
@@ -596,10 +601,16 @@ class TestRunReviewPosting:
         mock_pr.body = ""
         mock_pr.get_review_comments.return_value = []
 
-        mock_file = MagicMock()
-        mock_file.filename = "src/foo.py"
-        mock_file.status = "modified"
-        mock_file.patch = SIMPLE_PATCH
+        # Incremental stub — only the filename matters; patch here is intentionally
+        # different to confirm the PR diff patch is the one actually used.
+        incremental_stub = MagicMock()
+        incremental_stub.filename = "src/foo.py"
+
+        # Full PR diff file — this is the object (with patch) that should be reviewed.
+        pr_diff_file = MagicMock()
+        pr_diff_file.filename = "src/foo.py"
+        pr_diff_file.status = "modified"
+        pr_diff_file.patch = SIMPLE_PATCH
 
         content_mock = MagicMock()
         content_mock.decoded_content = b"content"
@@ -608,7 +619,8 @@ class TestRunReviewPosting:
 
         mocker.patch("prlens_core.reviewer.get_pull", return_value=mock_pr)
         mocker.patch("prlens_core.reviewer.get_last_reviewed_sha", return_value=base_sha)
-        mocker.patch("prlens_core.reviewer.get_incremental_files", return_value=[mock_file])
+        mocker.patch("prlens_core.reviewer.get_incremental_files", return_value=[incremental_stub])
+        mocker.patch("prlens_core.reviewer.get_diff", return_value=[pr_diff_file])
         mocker.patch("prlens_core.reviewer.load_guidelines", return_value="")
         mocker.patch("prlens_core.reviewer.flush_to_file")
 
