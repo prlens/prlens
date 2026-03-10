@@ -393,7 +393,17 @@ def run_review(
                 console.print("[yellow]No new commits since the last review. Nothing to do.[/yellow]")
                 return None
             try:
-                diff_files = sorted(get_incremental_files(this_repo, last_sha, head_sha), key=lambda f: f.filename)
+                incremental_files = get_incremental_files(this_repo, last_sha, head_sha)
+                incremental_filenames = {f.filename for f in incremental_files}
+                # Use the PR's full diff (base → head) for file patches.  GitHub's
+                # review API validates `line` + `side` against the PR diff, not the
+                # incremental (last_sha → head_sha) diff, so we must use PR-relative
+                # patches to avoid 422 "Path could not be resolved" errors.
+                pr_diff_map = {f.filename: f for f in get_diff(this_pr)}
+                diff_files = sorted(
+                    [pr_diff_map[name] for name in incremental_filenames if name in pr_diff_map],
+                    key=lambda f: f.filename,
+                )
                 incremental_info = {"base_sha": last_sha, "head_sha": head_sha}
                 console.print(
                     f"[cyan]Incremental review: {last_sha[:7]} → {head_sha[:7]} "
