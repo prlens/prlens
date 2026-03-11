@@ -484,17 +484,19 @@ class TestRunReviewPosting:
         run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
         mock_pr.create_review.assert_called_once()
 
-    def test_api_comments_use_line_and_side_not_position(self, mocker):
-        """Review API payload must use line+side (not position) so comments resolve correctly
-        regardless of whether this is a full or incremental review."""
+    def test_api_comments_use_position(self, mocker):
+        """Review API payload must use position (diff-relative offset) so GitHub can
+        place inline comments without the stricter path-resolution validation that
+        line+side requires and that produces blanket 422 errors."""
         comments = [{"line": 2, "severity": "minor", "comment": "style issue"}]
         mock_pr, mock_repo = _setup_run_review(mocker, reviewer_comments=comments)
         run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
         api_comments = mock_pr.create_review.call_args.kwargs["comments"]
         assert len(api_comments) == 1
-        assert api_comments[0]["line"] == 2
-        assert api_comments[0]["side"] == "RIGHT"
-        assert "position" not in api_comments[0]
+        # SIMPLE_PATCH: get_diff_positions maps line 2 → diff position 2.
+        assert api_comments[0]["position"] == 2
+        assert "line" not in api_comments[0]
+        assert "side" not in api_comments[0]
 
     def test_create_review_pins_commit_object(self, mocker):
         """create_review must receive the commit object for head_sha so GitHub

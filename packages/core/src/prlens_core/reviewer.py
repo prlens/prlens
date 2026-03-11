@@ -541,7 +541,7 @@ def run_review(
             )
             batch_event = event if is_last else "COMMENT"
             flush_to_file(repo, pr_number, batch)
-            api_comments = [{"path": c["path"], "line": c["line"], "side": "RIGHT", "body": c["body"]} for c in batch]
+            api_comments = [{"path": c["path"], "position": c["position"], "body": c["body"]} for c in batch]
             try:
                 this_pr.create_review(commit=head_commit, body=batch_body, event=batch_event, comments=api_comments)
                 total_posted += len(batch)
