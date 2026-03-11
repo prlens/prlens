@@ -7,7 +7,15 @@ from github import Github
 _SHA_MARKER_RE = re.compile(r"<!-- prlens-sha: ([0-9a-f]{40}) -->")
 
 
-def get_repo(repo_name: str, token: str):
+def get_repo(repo_name: str, token: str = None, app_id=None, private_key: str = None):
+    if app_id and private_key:
+        from github import Auth, GithubIntegration
+
+        owner, repo = repo_name.split("/", 1)
+        auth = Auth.AppAuth(int(app_id), private_key)
+        gi = GithubIntegration(auth=auth)
+        installation = gi.get_repo_installation(owner, repo)
+        return gi.get_github_for_installation(installation.id).get_repo(repo_name)
     return Github(token).get_repo(repo_name)
 
 
