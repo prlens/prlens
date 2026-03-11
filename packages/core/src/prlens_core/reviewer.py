@@ -372,7 +372,16 @@ def run_review(
     Returns a ReviewSummary in all other cases, including shadow mode.
     The CLI layer uses this to persist review history to the configured store.
     """
-    this_repo = repo_obj if repo_obj is not None else get_repo(repo, token=config["github_token"])
+    this_repo = (
+        repo_obj
+        if repo_obj is not None
+        else get_repo(
+            repo,
+            token=config.get("github_token"),
+            app_id=config.get("github_app_id"),
+            private_key=config.get("github_app_private_key"),
+        )
+    )
 
     try:
         this_pr = get_pull(this_repo, pr_number)

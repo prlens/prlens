@@ -47,7 +47,46 @@ class TestCLIValidation:
 
         result = CliRunner().invoke(main, ["review", "--repo", "owner/repo", "--pr", "1"])
         assert result.exit_code != 0
-        assert "token" in result.output.lower() or "GITHUB_TOKEN" in result.output
+        assert (
+            "github_token" in result.output.lower()
+            or "GITHUB_TOKEN" in result.output
+            or "credentials" in result.output.lower()
+        )  # noqa: E501
+
+    def test_app_credentials_skip_pat_requirement(self, mocker):
+        """When both app_id and private_key are set, review succeeds even with no GITHUB_TOKEN."""
+        cfg = _make_config(github_token=None)
+        cfg["github_app_id"] = "12345"
+        cfg["github_app_private_key"] = "-----BEGIN RSA PRIVATE KEY-----\n..."
+        mocker.patch("prlens_core.config.load_config", return_value=cfg)
+        # resolve_github_token returns None (no PAT configured), but app creds are present
+        mocker.patch("prlens_cli.auth.resolve_github_token", return_value=None)
+        mock_store = MagicMock(spec=SQLiteStore)
+        mock_store.list_reviews.return_value = []
+        mocker.patch("prlens_cli.cli._build_store", return_value=mock_store)
+        mocker.patch("prlens_cli.commands.review.get_repo", return_value=MagicMock())
+        mocker.patch("prlens_cli.commands.review.get_pull", return_value=MagicMock(title="Fix bug"))
+        mocker.patch("prlens_cli.commands.review.run_review", return_value=None)
+
+        result = CliRunner().invoke(main, ["review", "--repo", "owner/repo", "--pr", "1", "--yes"])
+
+        # Command must not fail with a credentials error
+        assert "No GitHub credentials" not in result.output
+        assert result.exit_code == 0
+
+    def test_neither_pat_nor_app_creds_raises_error(self, mocker):
+        """When neither PAT nor app credentials are present, UsageError is raised."""
+        cfg = _make_config(github_token=None)
+        cfg["github_app_id"] = None
+        cfg["github_app_private_key"] = None
+        mocker.patch("prlens_core.config.load_config", return_value=cfg)
+        mocker.patch("prlens_cli.auth.resolve_github_token", return_value=None)
+        mocker.patch("prlens_cli.cli._build_store", return_value=MagicMock(spec=SQLiteStore))
+
+        result = CliRunner().invoke(main, ["review", "--repo", "owner/repo", "--pr", "1"])
+
+        assert result.exit_code != 0
+        assert "credentials" in result.output.lower() or "GITHUB_TOKEN" in result.output
 
     def test_missing_anthropic_key(self, mocker):
         _patch_common(mocker, config=_make_config(model="anthropic", anthropic_key=None))
@@ -118,6 +157,26 @@ class TestCLIRunReview:
         CliRunner().invoke(main, ["review", "--repo", "owner/repo", "--pr", "1", "--yes"])
 
         mock_store.save.assert_called_once()
+
+    def test_get_repo_called_with_app_credentials(self, mocker):
+        """When app credentials present, get_repo receives app_id and private_key."""
+        # Use github_token=None so that no token ends up in the config
+        cfg = _make_config(github_token=None)
+        cfg["github_app_id"] = "12345"
+        cfg["github_app_private_key"] = "pem-content"
+        mocker.patch("prlens_core.config.load_config", return_value=cfg)
+        # resolve_github_token returns None — no PAT available
+        mocker.patch("prlens_cli.auth.resolve_github_token", return_value=None)
+        mock_store = MagicMock(spec=SQLiteStore)
+        mock_store.list_reviews.return_value = []
+        mocker.patch("prlens_cli.cli._build_store", return_value=mock_store)
+        mock_get_repo = mocker.patch("prlens_cli.commands.review.get_repo", return_value=MagicMock())
+        mocker.patch("prlens_cli.commands.review.get_pull", return_value=MagicMock(title="Fix bug"))
+        mocker.patch("prlens_cli.commands.review.run_review", return_value=None)
+
+        CliRunner().invoke(main, ["review", "--repo", "owner/repo", "--pr", "1", "--yes"])
+
+        mock_get_repo.assert_called_once_with("owner/repo", token=None, app_id="12345", private_key="pem-content")
 
 
 class TestCLIInteractive:

@@ -89,3 +89,38 @@ def test_exclude_list_is_not_shared_reference(tmp_path):
     config_b = load_config(config_path=str(tmp_path / "nonexistent.yml"))
     config_a["exclude"].append("migrations/")
     assert config_b["exclude"] == []
+
+
+def test_github_app_env_vars_loaded(monkeypatch):
+    monkeypatch.setenv("GITHUB_APP_ID", "12345")
+    monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY", "-----BEGIN RSA PRIVATE KEY-----\n...")
+    config = load_config(config_path="nonexistent.yml")
+    assert config["github_app_id"] == "12345"
+    assert config["github_app_private_key"] == "-----BEGIN RSA PRIVATE KEY-----\n..."
+
+
+def test_github_app_private_key_loaded_from_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_APP_PRIVATE_KEY", raising=False)
+    key_file = tmp_path / "prlens-app.pem"
+    key_file.write_text("-----BEGIN RSA PRIVATE KEY-----\nFAKEKEY\n-----END RSA PRIVATE KEY-----\n")
+    cfg = tmp_path / ".prlens.yml"
+    cfg.write_text(f"github_app_private_key_path: {key_file}\n")
+    config = load_config(config_path=str(cfg))
+    assert "FAKEKEY" in config["github_app_private_key"]
+
+
+def test_env_var_takes_precedence_over_key_file(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY", "env-key-content")
+    key_file = tmp_path / "prlens-app.pem"
+    key_file.write_text("file-key-content")
+    cfg = tmp_path / ".prlens.yml"
+    cfg.write_text(f"github_app_private_key_path: {key_file}\n")
+    config = load_config(config_path=str(cfg))
+    assert config["github_app_private_key"] == "env-key-content"
+
+
+def test_key_file_not_read_when_path_missing(tmp_path):
+    cfg = tmp_path / ".prlens.yml"
+    cfg.write_text(f"github_app_private_key_path: {tmp_path / 'nonexistent.pem'}\n")
+    config = load_config(config_path=str(cfg))
+    assert config["github_app_private_key"] is None

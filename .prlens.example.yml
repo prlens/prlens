@@ -26,3 +26,9 @@ batch_limit: 60
 
 # Set to true to review draft pull requests (skipped by default).
 review_draft_prs: false
+
+# GitHub App authentication (higher rate limits: 15,000 req/hr vs 5,000 for PAT).
+# Create a GitHub App, install it on your repo, and provide credentials here
+# or via GITHUB_APP_ID / GITHUB_APP_PRIVATE_KEY environment variables.
+# github_app_id: 12345
+# github_app_private_key_path: ./prlens-app.pem

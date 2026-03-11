@@ -109,21 +109,29 @@ def review_cmd(
 
     config = load_config(config_path, cli_overrides={"model": model, "guidelines": guidelines_path})
 
-    # Resolve token: env var first, then gh CLI session.
-    token = resolve_github_token()
-    if not token:
-        raise click.UsageError(
-            "No GitHub token found. Set GITHUB_TOKEN or run `gh auth login` first.\n"
-            "Create a token at https://github.com/settings/tokens"
-        )
-    config["github_token"] = token
+    app_id = config.get("github_app_id")
+    private_key = config.get("github_app_private_key")
+
+    if not (app_id and private_key):
+        token = resolve_github_token()
+        if not token:
+            raise click.UsageError(
+                "No GitHub credentials found. Set GITHUB_TOKEN, run 'gh auth login', "
+                "or configure github_app_id + github_app_private_key_path in .prlens.yml."
+            )
+        config["github_token"] = token
 
     if config["model"] == "anthropic" and not config.get("anthropic_api_key"):
         raise click.UsageError("ANTHROPIC_API_KEY environment variable is not set.")
     if config["model"] == "openai" and not config.get("openai_api_key"):
         raise click.UsageError("OPENAI_API_KEY environment variable is not set.")
 
-    this_repo = get_repo(repo, token=token)
+    this_repo = get_repo(
+        repo,
+        token=config.get("github_token"),
+        app_id=app_id,
+        private_key=private_key,
+    )
 
     if pr_number is None:
         prs = list(get_pull_requests(this_repo))

@@ -42,6 +42,17 @@ def load_config(config_path: str = ".prlens.yml", cli_overrides: Optional[dict] 
     config["anthropic_api_key"] = os.environ.get("ANTHROPIC_API_KEY")
     config["openai_api_key"] = os.environ.get("OPENAI_API_KEY")
 
+    # GitHub App auth (alternative to PAT — higher rate limits)
+    config["github_app_id"] = os.environ.get("GITHUB_APP_ID")
+    config["github_app_private_key"] = os.environ.get("GITHUB_APP_PRIVATE_KEY")
+
+    # Private key can also come from a file configured in .prlens.yml
+    key_path_str = config.get("github_app_private_key_path")
+    if key_path_str and not config["github_app_private_key"]:
+        key_path = Path(key_path_str)
+        if key_path.exists():
+            config["github_app_private_key"] = key_path.read_text()
+
     return config
 
 
