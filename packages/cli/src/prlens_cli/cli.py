@@ -53,6 +53,19 @@ def _build_store(config: dict):
         db_path = config.get("store_path", ".prlens.db")
         return SQLiteStore(db_path=db_path)
 
+    if store_type == "webhook":
+        from prlens_store.webhook import WebhookStore
+
+        url = config.get("webhook_url")
+        if not url:
+            console.print("[yellow]WebhookStore requires webhook_url in .prlens.yml. Falling back to no store.[/]")
+            return NoOpStore()
+        return WebhookStore(
+            url=url,
+            secret=config.get("webhook_secret"),
+            timeout=int(config.get("webhook_timeout", 10)),
+        )
+
     return NoOpStore()
 
 

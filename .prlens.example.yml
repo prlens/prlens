@@ -32,3 +32,10 @@ review_draft_prs: false
 # or via GITHUB_APP_ID / GITHUB_APP_PRIVATE_KEY environment variables.
 # github_app_id: 12345
 # github_app_private_key_path: ./prlens-app.pem
+
+# HTTP Webhook store — POST each review as JSON to any endpoint.
+# Useful for pushing data to Datadog, Grafana, Slack, n8n, or a custom dashboard.
+# store: webhook
+# webhook_url: https://hooks.example.com/prlens
+# webhook_secret: your-secret          # optional: enables HMAC-SHA256 signing
+# webhook_timeout: 10                  # optional: request timeout in seconds
