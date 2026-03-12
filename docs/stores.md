@@ -11,6 +11,7 @@ prlens can persist review records so you can query past reviews with `prlens his
 | `noop` | One-off reviews, no history needed | None | No |
 | `sqlite` | Solo developers, local history | Local file | No |
 | `gist` | Teams, zero infra | GitHub Gist | Yes |
+| `webhook` | Pushing data to external systems | HTTP endpoint you own | Yes (via receiver) |
 
 ---
 
@@ -134,6 +135,60 @@ The Gist contains a single file `prlens_history.json` — a JSON array where eac
 ### Failure Handling
 
 If the Gist store fails to persist a record (e.g. wrong token scope), the error is printed as a warning but the review is **not** aborted — the review comments are already posted to GitHub. The Gist write is best-effort.
+
+---
+
+## Webhook Store
+
+Delivers each completed review as a JSON POST to any HTTP endpoint. The receiving end can be Datadog, Grafana, Slack, n8n, an internal dashboard, or any custom HTTP service — prlens is agnostic to what happens downstream.
+
+```yaml
+store: webhook
+webhook_url: https://hooks.example.com/prlens
+webhook_secret: your-secret   # optional — enables HMAC-SHA256 signing
+webhook_timeout: 10           # optional — seconds, default 10
+```
+
+### Setup
+
+No infrastructure managed by prlens. Point `webhook_url` at any endpoint that accepts an HTTP POST with a JSON body.
+
+### Payload
+
+Every review POSTs the following JSON:
+
+```json
+{
+  "repo": "owner/repo",
+  "pr_number": 42,
+  "pr_title": "Add login flow",
+  "reviewer_model": "anthropic",
+  "head_sha": "abc1234...",
+  "reviewed_at": "2026-03-11T10:00:00+00:00",
+  "event": "REQUEST_CHANGES",
+  "total_comments": 3,
+  "files_reviewed": 2,
+  "comments": [
+    {"file": "src/auth.py", "line": 42, "severity": "major", "comment": "..."}
+  ]
+}
+```
+
+### Request Signing
+
+Set `webhook_secret` to enable HMAC-SHA256 signing. prlens adds the header:
+
+```
+X-Prlens-Signature: sha256=<hex-digest>
+```
+
+The signature is computed over the raw JSON request body using the secret as the key — the same convention used by GitHub and Stripe webhooks, so existing verification middleware works without changes.
+
+### Notes
+
+- `list_reviews()` always returns `[]` — the webhook store is push-only. `prlens history` and `prlens stats` will return "No review records found" when `store: webhook`.
+- If the POST fails (network error, non-2xx response), a warning is printed but the review is **not** aborted — comments are already posted to GitHub.
+- No new runtime dependencies: the webhook store uses Python's stdlib `urllib` only.
 
 ---
 
