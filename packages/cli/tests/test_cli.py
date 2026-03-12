@@ -10,6 +10,7 @@ from prlens_cli.cli import _build_store, main
 from prlens_store.gist import GistStore
 from prlens_store.noop import NoOpStore
 from prlens_store.sqlite import SQLiteStore
+from prlens_store.webhook import WebhookStore
 from prlens_store.models import CommentRecord, ReviewRecord
 
 
@@ -299,6 +300,27 @@ class TestBuildStore:
 
     def test_falls_back_to_noop_when_token_missing(self):
         store = _build_store({"store": "gist", "gist_id": "abc123"})
+        assert isinstance(store, NoOpStore)
+
+    def test_returns_webhook_store_when_url_provided(self):
+        store = _build_store({"store": "webhook", "webhook_url": "http://example.com/hook"})
+        assert isinstance(store, WebhookStore)
+
+    def test_webhook_store_forwards_secret_and_timeout(self):
+        store = _build_store(
+            {
+                "store": "webhook",
+                "webhook_url": "http://example.com/hook",
+                "webhook_secret": "s3cr3t",
+                "webhook_timeout": "30",
+            }
+        )
+        assert isinstance(store, WebhookStore)
+        assert store._secret == "s3cr3t"
+        assert store._timeout == 30
+
+    def test_falls_back_to_noop_when_webhook_url_missing(self):
+        store = _build_store({"store": "webhook"})
         assert isinstance(store, NoOpStore)
 
 
