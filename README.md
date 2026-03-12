@@ -13,7 +13,7 @@ AI-powered GitHub PR code reviewer for teams. Reviews each changed file against 
 
 - **Codebase-aware** — injects co-change history, directory siblings, and paired test files into every review so the AI understands context beyond the diff
 - **Language-agnostic** — context signals are based on git history and filename patterns, not import parsing; works identically for Python, Go, TypeScript, Ruby, Rust, and more
-- **Team history** — stores review records in a shared GitHub Gist (zero infra) or local SQLite; query with `prlens history` and `prlens stats`
+- **Team history** — stores review records in a shared GitHub Gist (zero infra), local SQLite, or push to any HTTP endpoint via webhook; query with `prlens history` and `prlens stats`
 - **Zero onboarding friction** — `prlens init` creates `.prlens.yml`, provisions the team Gist, and generates the GitHub Actions workflow in one command
 - **GitHub CLI fallback** — resolves your GitHub token from an existing `gh auth login` session; no PAT copy-paste required for local runs
 - Supports **Anthropic Claude** and **OpenAI GPT-4o** as AI backends
@@ -31,7 +31,7 @@ prlens is structured as a monorepo with three independently installable packages
 | Package | PyPI name | Purpose |
 |---|---|---|
 | `packages/core` | `prlens-core` | Review engine: providers, context gathering, orchestration |
-| `packages/store` | `prlens-store` | Pluggable history: NoOpStore, GistStore, SQLiteStore |
+| `packages/store` | `prlens-store` | Pluggable history: NoOpStore, GistStore, SQLiteStore, WebhookStore |
 | `packages/cli` | `prlens` | CLI: `review`, `init`, `history`, `stats` |
 
 Installing `prlens` pulls in `prlens-core` and `prlens-store` automatically.
@@ -193,10 +193,11 @@ Options:
 # AI provider: anthropic | openai
 model: anthropic
 
-# Review history store: noop (default) | gist | sqlite
+# Review history store: noop (default) | gist | sqlite | webhook
 # store: gist
 # gist_id: <gist-id>       # created automatically by `prlens init`
 # store_path: .prlens.db   # only for store: sqlite
+# webhook_url: https://hooks.example.com/prlens   # only for store: webhook
 
 max_chars_per_file: 20000
 batch_limit: 60

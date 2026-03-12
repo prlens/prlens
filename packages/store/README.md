@@ -9,6 +9,7 @@ Pluggable review history backends for [prlens](https://github.com/prlens/prlens)
 | `noop` | `NoOpStore` | Default — no persistence, zero config |
 | `gist` | `GistStore` | Shared GitHub Gist, zero infrastructure |
 | `sqlite` | `SQLiteStore` | Local SQLite file |
+| `webhook` | `WebhookStore` | POST each review as JSON to any HTTP endpoint |
 
 ## Installation
 

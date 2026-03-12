@@ -10,7 +10,7 @@ prlens is configured via a `.prlens.yml` file in your repository root. All keys 
 # AI provider: anthropic | openai
 model: anthropic
 
-# Review history store: noop (default) | sqlite | gist
+# Review history store: noop (default) | sqlite | gist | webhook
 store: noop
 
 # SQLite store — path to the database file (only used when store: sqlite)
@@ -18,6 +18,11 @@ store_path: .prlens.db
 
 # Gist store — Gist ID created by `prlens init` (only used when store: gist)
 # gist_id: abc123def456
+
+# Webhook store — POST each review as JSON to any HTTP endpoint (only used when store: webhook)
+# webhook_url: https://hooks.example.com/prlens
+# webhook_secret: your-secret   # optional: HMAC-SHA256 signing
+# webhook_timeout: 10           # optional: request timeout in seconds
 
 # Path to your team's coding guidelines (Markdown). If omitted, prlens uses
 # its built-in backend guidelines.
@@ -50,9 +55,12 @@ review_draft_prs: false
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `model` | string | `anthropic` | AI provider: `anthropic` or `openai` |
-| `store` | string | `noop` | History backend: `noop`, `sqlite`, or `gist` |
+| `store` | string | `noop` | History backend: `noop`, `sqlite`, `gist`, or `webhook` |
 | `store_path` | string | `.prlens.db` | SQLite file path (only used with `store: sqlite`) |
 | `gist_id` | string | — | GitHub Gist ID (only used with `store: gist`) |
+| `webhook_url` | string | — | HTTP endpoint to POST reviews to (only used with `store: webhook`) |
+| `webhook_secret` | string | — | HMAC-SHA256 signing secret (optional, `store: webhook` only) |
+| `webhook_timeout` | int | `10` | Request timeout in seconds (optional, `store: webhook` only) |
 | `guidelines` | string | — | Path to a Markdown guidelines file |
 | `max_chars_per_file` | int | `20000` | Character limit per file before truncation |
 | `batch_limit` | int | `60` | Max comments per GitHub API review call |
@@ -132,3 +140,14 @@ gist_id: abc123def456    # created automatically by `prlens init`
 ```
 
 The Gist store requires a GitHub token with `gist` scope. The built-in `GITHUB_TOKEN` in GitHub Actions does not have this — use a PAT stored as a repository secret.
+
+### Webhook (push to any HTTP endpoint)
+
+```yaml
+store: webhook
+webhook_url: https://hooks.example.com/prlens
+webhook_secret: your-secret   # optional: enables HMAC-SHA256 signing
+webhook_timeout: 10           # optional: seconds, default 10
+```
+
+See [History Stores — Webhook](stores.md#webhook-store) for payload shape and signing details.
