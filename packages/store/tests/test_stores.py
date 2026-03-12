@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from prlens_store.gist import GistStore
 from prlens_store.models import CommentRecord, ReviewRecord
 from prlens_store.noop import NoOpStore
 from prlens_store.sqlite import SQLiteStore
+from prlens_store.webhook import WebhookStore
 
 
 def _make_record(repo="owner/repo", pr_number=1, total_comments=2, event="COMMENT"):
@@ -258,3 +261,124 @@ class TestGistStore:
 
         captured = capsys.readouterr()
         assert "GITHUB_TOKEN" not in captured.out
+
+
+# ---------------------------------------------------------------------------
+# WebhookStore
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_response(status=200):
+    """Return a mock HTTP response context manager."""
+    resp = MagicMock()
+    resp.status = status
+    resp.__enter__ = lambda s: s
+    resp.__exit__ = MagicMock(return_value=False)
+    return resp
+
+
+class TestWebhookStore:
+    def test_save_posts_json(self, capsys):
+        store = WebhookStore(url="http://example.com/hook")
+        with patch("urllib.request.urlopen", return_value=_make_mock_response()) as mock_open:
+            store.save(_make_record())
+
+        mock_open.assert_called_once()
+        req = mock_open.call_args[0][0]
+        assert req.full_url == "http://example.com/hook"
+        assert req.get_header("Content-type") == "application/json"
+
+    def test_payload_contains_review_fields(self):
+        store = WebhookStore(url="http://example.com/hook")
+        captured_data = {}
+
+        def fake_urlopen(req, timeout=None):
+            captured_data["body"] = json.loads(req.data)
+            return _make_mock_response()
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            store.save(_make_record())
+
+        body = captured_data["body"]
+        assert body["repo"] == "owner/repo"
+        assert body["pr_number"] == 1
+        assert body["event"] == "COMMENT"
+        assert body["total_comments"] == 2
+        assert body["files_reviewed"] == 1
+        assert len(body["comments"]) == 1
+        assert body["comments"][0]["file"] == "src/auth.py"
+
+    def test_hmac_signature_header_set_when_secret_provided(self):
+        store = WebhookStore(url="http://example.com/hook", secret="mysecret")
+        captured_headers = {}
+
+        def fake_urlopen(req, timeout=None):
+            captured_headers["sig"] = req.get_header("X-prlens-signature")
+            return _make_mock_response()
+
+        record = _make_record()
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            store.save(record)
+
+        assert captured_headers["sig"] is not None
+        assert captured_headers["sig"].startswith("sha256=")
+
+        # Verify the HMAC is correct
+        payload = json.dumps(WebhookStore._to_dict(record)).encode()
+        expected_sig = "sha256=" + hmac.new(b"mysecret", payload, hashlib.sha256).hexdigest()
+        assert captured_headers["sig"] == expected_sig
+
+    def test_no_signature_header_when_secret_absent(self):
+        store = WebhookStore(url="http://example.com/hook")
+        captured_headers = {}
+
+        def fake_urlopen(req, timeout=None):
+            captured_headers["sig"] = req.get_header("X-prlens-signature")
+            return _make_mock_response()
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            store.save(_make_record())
+
+        assert captured_headers["sig"] is None
+
+    def test_save_does_not_raise_on_network_error(self, capsys):
+        from urllib.error import URLError
+
+        store = WebhookStore(url="http://example.com/hook")
+        with patch("urllib.request.urlopen", side_effect=URLError("connection refused")):
+            store.save(_make_record())  # must not raise
+
+        captured = capsys.readouterr()
+        assert "Warning" in captured.out
+
+    def test_save_warns_on_http_error_status(self, capsys):
+        store = WebhookStore(url="http://example.com/hook")
+        with patch("urllib.request.urlopen", return_value=_make_mock_response(status=500)):
+            store.save(_make_record())
+
+        captured = capsys.readouterr()
+        assert "Warning" in captured.out
+        assert "500" in captured.out
+
+    def test_list_reviews_returns_empty(self):
+        store = WebhookStore(url="http://example.com/hook")
+        assert store.list_reviews("owner/repo") == []
+        assert store.list_reviews("owner/repo", pr_number=1) == []
+
+    def test_to_dict_roundtrip(self):
+        record = _make_record()
+        d = WebhookStore._to_dict(record)
+
+        assert d["repo"] == record.repo
+        assert d["pr_number"] == record.pr_number
+        assert d["pr_title"] == record.pr_title
+        assert d["reviewer_model"] == record.reviewer_model
+        assert d["head_sha"] == record.head_sha
+        assert d["reviewed_at"] == record.reviewed_at
+        assert d["event"] == record.event
+        assert d["total_comments"] == record.total_comments
+        assert d["files_reviewed"] == record.files_reviewed
+        assert len(d["comments"]) == 1
+        assert d["comments"][0]["file"] == "src/auth.py"
+        assert d["comments"][0]["line"] == 42
+        assert d["comments"][0]["severity"] == "major"
