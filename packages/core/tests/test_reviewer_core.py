@@ -184,6 +184,80 @@ class TestRunReviewEarlyExits:
 
         mock_pr.create_review.assert_not_called()
 
+    def test_returns_none_when_force_push_detected_during_review(self, mocker):
+        """If PR HEAD changes while the AI is running, return None instead of posting stale positions."""
+        old_sha = "a" * 40
+        new_sha = "b" * 40
+
+        # First get_pull call (start of run_review) sees old SHA.
+        pr_initial = MagicMock()
+        pr_initial.draft = False
+        pr_initial.head.sha = old_sha
+        pr_initial.body = ""
+        pr_initial.get_review_comments.return_value = []
+
+        # Second get_pull call (pre-posting refresh) sees new SHA after force push.
+        pr_refreshed = MagicMock()
+        pr_refreshed.head.sha = new_sha
+
+        mocker.patch("prlens_core.reviewer.get_pull", side_effect=[pr_initial, pr_refreshed])
+        mocker.patch("prlens_core.reviewer.get_last_reviewed_sha", return_value=None)
+
+        mock_file = MagicMock()
+        mock_file.filename = "src/foo.py"
+        mock_file.status = "modified"
+        mock_file.patch = SIMPLE_PATCH
+        mocker.patch("prlens_core.reviewer.get_diff", return_value=[mock_file])
+        mocker.patch("prlens_core.reviewer.load_guidelines", return_value="guidelines")
+
+        mock_reviewer = MagicMock()
+        mock_reviewer.review.return_value = [{"line": 2, "severity": "minor", "comment": "issue"}]
+        mocker.patch("prlens_core.reviewer._get_reviewer", return_value=mock_reviewer)
+
+        content_mock = MagicMock()
+        content_mock.decoded_content = b"file content"
+        mock_repo = MagicMock()
+        mock_repo.get_contents.return_value = content_mock
+
+        result = run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+
+        assert result is None
+        pr_initial.create_review.assert_not_called()
+        pr_refreshed.create_review.assert_not_called()
+
+    def test_proceeds_normally_when_head_sha_unchanged(self, mocker):
+        """If HEAD SHA is the same before and after the review, create_review is called."""
+        sha = "a" * 40
+
+        mock_pr = MagicMock()
+        mock_pr.draft = False
+        mock_pr.head.sha = sha
+        mock_pr.body = ""
+        mock_pr.get_review_comments.return_value = []
+
+        mocker.patch("prlens_core.reviewer.get_pull", return_value=mock_pr)
+        mocker.patch("prlens_core.reviewer.get_last_reviewed_sha", return_value=None)
+
+        mock_file = MagicMock()
+        mock_file.filename = "src/foo.py"
+        mock_file.status = "modified"
+        mock_file.patch = SIMPLE_PATCH
+        mocker.patch("prlens_core.reviewer.get_diff", return_value=[mock_file])
+        mocker.patch("prlens_core.reviewer.load_guidelines", return_value="guidelines")
+
+        mock_reviewer = MagicMock()
+        mock_reviewer.review.return_value = [{"line": 2, "severity": "minor", "comment": "issue"}]
+        mocker.patch("prlens_core.reviewer._get_reviewer", return_value=mock_reviewer)
+
+        content_mock = MagicMock()
+        content_mock.decoded_content = b"file content"
+        mock_repo = MagicMock()
+        mock_repo.get_contents.return_value = content_mock
+
+        run_review("owner/repo", 1, _base_config(), auto_confirm=True, repo_obj=mock_repo)
+
+        mock_pr.create_review.assert_called_once()
+
     def test_full_review_bypasses_incremental(self, mocker):
         """--full-review should skip SHA lookup and review all files."""
         sha = "a" * 40

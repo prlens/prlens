@@ -517,6 +517,23 @@ def run_review(
     sha_marker = f"\n<!-- prlens-sha: {head_sha} -->"
     summary_body = _build_summary(file_summary, all_comments, elapsed, incremental_info) + sha_marker
 
+    # Guard against force pushes that occurred while the AI was running.
+    # Re-fetching the PR is one cheap API call; it prevents us from trying to
+    # post a review pinned to a commit that is no longer the PR's HEAD, which
+    # GitHub rejects with 422 "Path could not be resolved".
+    try:
+        this_pr = get_pull(this_repo, pr_number)
+        if this_pr.head.sha != head_sha:
+            console.print(
+                f"[yellow]A force push was detected during this review "
+                f"({head_sha[:7]} → {this_pr.head.sha[:7]}). "
+                f"Comments were generated but cannot be posted — diff positions are now stale. "
+                f"Re-run prlens to review the updated branch.[/yellow]"
+            )
+            return None
+    except GithubException:
+        pass  # can't verify — proceed; create_review will fail with its own handler
+
     # Pin the review to the exact commit we analysed. GitHub requires commit_id
     # to match the PR's last commit when using line-based comment positions;
     # without it a concurrent push could associate comments with the wrong SHA.
